@@ -26,5 +26,4 @@ Connecting Raspberry Pi with AWS IoT Core and storing data locally in MongoDB
   * Subscribe to a topic "sdk/test/Pub"
   * Publish to topic "sdk/test/Sub"
     * Send "message" : "color", and it will return White, in any other case it will return unknown query
-    * Same will be written in local mongodb database, use MongoDB Compass and connect to local db
-    * 
+    * Same will be written along with time in local mongodb database, use MongoDB Compass and connect to local db
