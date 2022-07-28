@@ -1,0 +1,2 @@
+responseMessage = ""
+queryReceived = False

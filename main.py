@@ -20,6 +20,10 @@
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 import logging
 import time
+import config # global constants for receiving message and flag
+import json
+from pymongo import MongoClient
+import datetime
 import argparse
 
 
@@ -29,7 +33,38 @@ def customOnMessage(message):
     print(message.payload)
     print("from topic: ")
     print(message.topic)
+    # parse payload:
+    parsedMessage = json.loads(message.payload)
+    # response preparation
+    if parsedMessage["message"] == 'color':
+        config.responseMessage = "White"
+    else:
+        config.responseMessage = "unknown query"
+    # printing results
+    print("--------------")
+    print("query is of : " + parsedMessage["message"])
+    print("Returning result on topic:" + topic_pub)
     print("--------------\n\n")
+
+    # setting flag for publish
+    config.queryReceived = True
+
+    # writing data to local mongodb
+    # Connect to mongodb localhost and create database collection for IoT
+    uri = "mongodb://localhost:27017"
+    client = MongoClient(uri)
+    # database and collection code goes here
+    db = client.iot_data
+    coll = db.queries_answers
+    now = datetime.datetime.now()
+    docs = [
+        # {"query": parsedMessage["message"], "response": config.responseMessage}
+        {"query": parsedMessage["message"], "response": config.responseMessage, "time": now}
+    ]
+    result = coll.insert_many(docs)
+    print(result.inserted_ids)
+    # Close the connection to MongoDB when you're done.
+    client.close()
 
 
 # Suback callback
@@ -137,6 +172,13 @@ time.sleep(2)
 # Publish to the same topic in a loop forever
 loopCount = 0
 while True:
-    myAWSIoTMQTTClient.publishAsync(topic_pub, "New Message " + str(loopCount), 1, ackCallback=customPubackCallback)
+    message = {}
+    message['message'] = defaultMessage
+    message['sequence'] = loopCount
+    messageJson = json.dumps(message)
+    if config.queryReceived:
+        myAWSIoTMQTTClient.publishAsync(topic_pub, config.responseMessage, 1, ackCallback=customPubackCallback)
+        print("Sent message = " + config.responseMessage)
+    config.queryReceived = False
     loopCount += 1
     time.sleep(1)
